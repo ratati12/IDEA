@@ -27,8 +27,8 @@ int main (int argc, char* argv[])
     uint16_t Z[54];// = (uint16_t*) malloc(sizeof(uint16_t) * 54); // 52 16-битных подключа шифрования
     uint16_t DK[54]; // 52 16-биных подключа дешифрования
     uint64_t XX; // открытый текст
-    uint64_t TT; // расшифрованный закрытый текст
-    uint64_t YY; // закрытый текст
+    uint64_t TT = (uint64_t)0x0; // расшифрованный закрытый текст
+    uint64_t YY = (uint64_t)0x0; // закрытый текст
     uint128_t key;
     ((uint64_t*)&key)[0] = (uint64_t)0x0001000200030004; // 128-битный ключ 
     ((uint64_t*)&key)[1] = (uint64_t)0x0005000600070008; // 128-битный ключ
@@ -66,9 +66,9 @@ int main (int argc, char* argv[])
         printf("\t%x", DK[i]);
     }
     printf ("\n\n plaintext X %x %x %x %x", ((uint16_t*)&XX)[0], ((uint16_t*)&XX)[1], ((uint16_t*)&XX)[2], ((uint16_t*)&XX)[3]);
-    cipher(XX, YY, Z);
+    cipher(XX, &YY, Z);
     printf ("\n\n ciphertext Y %x %x %x %x", ((uint16_t*)&YY)[0], ((uint16_t*)&YY)[1], ((uint16_t*)&YY)[2], ((uint16_t*)&YY)[3]);
-    cipher(YY, TT, DK);
+    cipher(YY, &TT, DK);
     printf ("\n\n result of decryption T %x %x %x %x\n", ((uint16_t*)&TT)[0], ((uint16_t*)&TT)[1], ((uint16_t*)&TT)[2], ((uint16_t*)&TT)[3]);
     return 0;
 }
@@ -137,14 +137,15 @@ void de_key(uint16_t* Z, uint16_t* DK)
     }     
 }
 
-void cipher(uint64_t XX, uint64_t YY, uint16_t* Z)
+void cipher(uint64_t XX, uint64_t *YY, uint16_t* Z)
 {
-    int i, j;
-    uint16_t A=0, B=0, C=0, D=0, E=0, F=0, P[5];
+    uint16_t i, j;
+    uint32_t A=0, B=0, C=0, D=0, E=0, F=0, P[5]={0};
     for (i = 1; i <= 4; i++)
     {
         P[i] = ((uint16_t*)&XX)[i-1];
     }
+    //printf("\n\n P[1] = %x\tP[2] = %x\tP[3] = %x\tP[4] = %x", P[1], P[2], P[3], P[4]);
     printf("\n\n ROUND DATA\tD1\tD2\tD3\tD4\n");
     for (i = 1; i <= 8; i++) // Раунды 1-8
     {
@@ -155,17 +156,18 @@ void cipher(uint64_t XX, uint64_t YY, uint16_t* Z)
         D = (P[4] * Z[4+(i-1)*6]) % max;
         E = A^C;
         F = B^D;
+        printf("\n\nZ[1] = %x \tZ[2] = %x\n", Z[5+(i-1)*6], Z[6+(i-1)*6]);
         P[1] = A ^ ((((F + ((E*Z[5+(i-1)*6])%max))%fuyi)*Z[6+(i-1)*6])%max);
         P[2] = C ^ ((((F + ((E*Z[5+(i-1)*6])%max))%fuyi)*Z[6+(i-1)*6])%max);
         P[3] = B ^ ((((E*Z[5+(i-1)*6])%max)  + ((((F + ((E*Z[5+(i-1)*6])%max))%fuyi)*Z[6+(i-1)*6])%max))%fuyi);
         P[4] = D ^ ((((E*Z[5+(i-1)*6])%max)  + ((((F + ((E*Z[5+(i-1)*6])%max))%fuyi)*Z[6+(i-1)*6])%max))%fuyi);
-        //printf ("%d: A = %x, B = %x, C = %x, D = %x, E = %x, F = %x\n", i, A, B, C, D, E, F);
+        printf ("%d: A = %x, B = %x, C = %x, D = %x, E = %x, F = %x\n", i, A, B, C, D, E, F);
         printf("%d-th round\t%x\t%x\t%x\t%x\n", i, P[1], P[2], P[3], P[4]);
     }
-    ((uint16_t*)&YY)[0] = (P[1] * Z[49]) % max;   // Раунды 49-52
-    ((uint16_t*)&YY)[1] = (P[2] + Z[50]) % fuyi;  //
-    ((uint16_t*)&YY)[2] = (P[3] + Z[51]) % fuyi;  //
-    ((uint16_t*)&YY)[3] = (P[4] * Z[52]) % max;   //
+    ((uint16_t*)YY)[0] = (P[1] * Z[49]) % max;   // Раунды 49-52
+    ((uint16_t*)YY)[1] = (P[2] + Z[50]) % fuyi;  //
+    ((uint16_t*)YY)[2] = (P[3] + Z[51]) % fuyi;  //
+    ((uint16_t*)YY)[3] = (P[4] * Z[52]) % max;   //
 }
 
 

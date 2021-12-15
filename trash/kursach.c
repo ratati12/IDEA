@@ -34,6 +34,7 @@ int main(int argc, char * argv[])
         return -1;
     }
     in = fopen(argv[2], "rb");
+
     out = fopen(strcat(argv[2], ".encrypted"), "wb");
     while(1)
     {
@@ -41,7 +42,6 @@ int main(int argc, char * argv[])
         {
             XX[i] = 0;
             if (0 == fread(&XX[i], sizeof(uint16_t), 1, in)) {flag = 1; break;}
-            printf("DEBUG : %x\n", XX[i]);
         }
         if (flag == 1) break;
         IDEA(XX, YY, argv[1]);
@@ -64,30 +64,30 @@ void IDEA(unsigned XX[5], unsigned YY[5], char* mode){
     ((uint64_t*)&key)[0] = (uint64_t)0x0001000200030004; // 128-битный ключ 
     ((uint64_t*)&key)[1] = (uint64_t)0x0005000600070008; // 128-битный ключ
     en_key(key, Z); 
-        printf("\n encryption keys Z1 Z2 Z3 Z4 Z5 Z6");
-          for(j = 1; j <= 9; j++){ 
-          printf("\n %3d-th round ", j);
-          if (j == 9) 
-          for(i = 1; i <= 4; i++) 
-          printf(" %x",Z[i][j]);
-          else 
-          for(i = 1; i <= 6; i++)
-          printf(" %x",Z[i][j]);
-          }
+    printf("\n encryption keys Z1 Z2 Z3 Z4 Z5 Z6");
+    for(j = 1; j <= 9; j++){ 
+        printf("\n %3d-th round ", j);
+        if (j == 9) 
+            for(i = 1; i <= 4; i++) 
+                printf(" %x",Z[i][j]);
+        else 
+            for(i = 1; i <= 6; i++)
+                printf(" %x",Z[i][j]);
+    }
 
     de_key(Z,DK); 
-        printf("\n \n decryption keys DK1 DK2 DK3 DK4 DK5 DK6 ");
-          for(j = 1; j <= 9; j++){
-          printf("\n %3d-th round ", j);
-          if (j == 9)
-          for(i = 1; i <= 4; i++)
-          printf(" %x",DK[i][j]);
-          else
-          for(i = 1; i <= 6; i++)
-          printf(" %x",DK[i][j]);
-          }
+    printf("\n \n decryption keys DK1 DK2 DK3 DK4 DK5 DK6 ");
+    for(j = 1; j <= 9; j++){
+        printf("\n %3d-th round ", j);
+        if (j == 9)
+            for(i = 1; i <= 4; i++)
+                printf(" %x",DK[i][j]);
+        else
+            for(i = 1; i <= 6; i++)
+                printf(" %x",DK[i][j]);
+    }
 
-        printf("\n \n plaintext X %x %x %x %x \n", XX[1], XX[2], XX[3], XX[4]);
+    printf("\n \n plaintext X %x %x %x %x \n", XX[1], XX[2], XX[3], XX[4]);
     if (strcmp(mode, "-e") == 0) cipher(XX,YY,Z);
     if (strcmp(mode, "-d") == 0) cipher(XX,YY,DK);
     //    printf("\n \n cipherhertext Y %x %x %x %x \n", YY[1], YY[2], YY[3], YY[4]);

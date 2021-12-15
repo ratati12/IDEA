@@ -10,15 +10,15 @@
 # define fuyi 65536
 # define one 65535
 # define round 8
-
 typedef unsigned __int128 uint128_t;
 
 
-void cip(unsigned IN[5],unsigned OUT[5],uint16_t Z[7][10]); 
-void en_key(uint128_t key, uint16_t Z[7][10] );
-void de_key(uint16_t Z[7][10],uint16_t DK[7][10]);
-unsigned inv(unsigned xin);
-unsigned mul(unsigned a, unsigned b);
+void cipher(unsigned XX[5],unsigned YY[5],uint16_t Z[7][10]);   // Функция шифрования 
+void en_key(uint128_t key, uint16_t Z[7][10] );                 // Функция генерации ключей шифрования
+void de_key(uint16_t Z[7][10],uint16_t DK[7][10]);              // Функция генерации ключей дешифрования
+unsigned inv(unsigned xin);                                     // Функция мультпликативной инверсии
+unsigned mul(unsigned a, unsigned b);                           // Функция умножения 
+
 
 int main(){
     int i, j, k, x;
@@ -27,10 +27,10 @@ int main(){
     unsigned XX[5]; //4 16-битных блока входных данных
     unsigned YY[5]; //4 16-битных блока зашифрованных данных
     unsigned TT[5]; //4 16-битных блока расшифорванных данных
-    uint128_t key;
+    uint128_t key; // 128-битный ключ
     ((uint64_t*)&key)[0] = (uint64_t)0x0001000200030004; // 128-битный ключ 
     ((uint64_t*)&key)[1] = (uint64_t)0x0005000600070008; // 128-битный ключ
-    en_key(key, Z); /* generate encryption subkeys Z[i][r] */
+    en_key(key, Z); 
     printf("\n encryption keys Z1 Z2 Z3 Z4 Z5 Z6");
     for(j = 1; j <= 9; j++){ 
         printf("\n %3d-th round ", j);
@@ -42,7 +42,7 @@ int main(){
                 printf(" %6u",Z[i][j]);
     }
 
-    de_key(Z,DK); /* compute decryption subkeys DK[i][r] */
+    de_key(Z,DK); 
     printf("\n \n decryption keys DK1 DK2 DK3 DK4 DK5 DK6 ");
     for(j = 1; j <= 9; j++){
         printf("\n %3d-th round ", j);
@@ -57,34 +57,31 @@ int main(){
     for (x = 1; x <= 4; x++) 
         XX[x] = x-1;
     printf("\n \n plaintext X %6u %6u %6u %6u \n", XX[1], XX[2], XX[3], XX[4]);
-    cip(XX,YY,Z); /* encipher XX to YY with key Z */
-    printf("\n \n ciphertext Y %6u %6u %6u %6u \n", YY[1], YY[2], YY[3], YY[4]);
-    cip(YY,TT,DK); /* decipher YY to TT with key DK */
+    cipher(XX,YY,Z);
+    printf("\n \n cipherhertext Y %6u %6u %6u %6u \n", YY[1], YY[2], YY[3], YY[4]);
+    cipher(YY,TT,DK);
     printf("\n \n result T %6u %6u %6u %6u \n", TT[1], TT[2], TT[3], TT[4]);
     return 0;
 }
 
-/* encryption algorithm */
-void cip(unsigned IN[5],unsigned OUT[5],uint16_t Z[7][10]){
+/* Алгоритм шифрования */
+void cipher(unsigned XX[5],unsigned YY[5],uint16_t Z[7][10]){
     uint16_t r,x1,x2,x3,x4,kk,t1,t2,a;
-    x1 = IN[1]; 
-    x2 = IN[2]; 
-    x3 = IN[3]; 
-    x4 = IN[4];
-    for (r = 1; r <= 8; r++){ /* the round function */
+    x1 = XX[1]; 
+    x2 = XX[2]; 
+    x3 = XX[3]; 
+    x4 = XX[4];
+    for (r = 1; r <= 8; r++){ /* Раунды 1-8 */
 
-        /* the group operation on 64-bits block */
         x1 = mul(x1, Z[1][r]); 
         x4 = mul(x4, Z[4][r]);
         x2 = (x2 + Z[2][r]) & one; 
         x3 = (x3 + Z[3][r]) & one;
 
-        /* the function of the MA structure */
         kk = mul(Z[5][r], (x1^x3));
         t1 = mul(Z[6][r], (kk + (x2^x4)) & one);
         t2 = (kk + t1) & one;
 
-        /* the involutary permutation PI */
         x1 = x1^t1; 
         x4 = x4^t2;
         a = x2^t2; 
@@ -93,14 +90,13 @@ void cip(unsigned IN[5],unsigned OUT[5],uint16_t Z[7][10]){
         printf("\n %1u-th rnd %6u %6u %6u %6u ", r, x1, x2, x3, x4);
     }
 
-    /* the output transformation */
-    OUT[1] = mul(x1, Z[1][round+1]);
-    OUT[4] = mul(x4,Z[4][round+1]);
-    OUT[2] = (x3 + Z[2][round +1]) & one;
-    OUT[3] = (x2 + Z[3][round+1]) & one;
+    /* Выходное преобразование */
+    YY[1] = mul(x1, Z[1][round+1]);
+    YY[4] = mul(x4,Z[4][round+1]);
+    YY[2] = (x3 + Z[2][round +1]) & one;
+    YY[3] = (x2 + Z[3][round+1]) & one;
 }
 
-/* multiplication using the Low-High algorithm */
 unsigned mul(unsigned a, unsigned b){
     long int p;
     long unsigned q;
@@ -117,7 +113,6 @@ unsigned mul(unsigned a, unsigned b){
     return (unsigned)(p & one);
 }
 
-/* compute inverse of xin by Euclidean gcd alg. */
 unsigned inv(unsigned xin){ 
     long n1,n2,q,r,b1,b2,t;
     if (xin == 0)
@@ -147,7 +142,7 @@ unsigned inv(unsigned xin){
     return (unsigned)b2;
 }
 
-/* generate encryption subkeys Z's */
+/* Генерация ключей шифрования */
 void en_key(uint128_t key, uint16_t Z[7][10]){
     int i, j=0,k;
     uint16_t temp[9], S[54];
@@ -176,7 +171,7 @@ void en_key(uint128_t key, uint16_t Z[7][10]){
     }
 }
 
-/* compute decryption subkeys DK's */
+/* Генерация ключей дешифрования */
 void de_key(uint16_t Z[7][10],uint16_t DK[7][10]){
     int i, j;
     uint16_t tZ[54], tD[54];

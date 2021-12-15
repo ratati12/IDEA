@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 # define max 65537
 # define fuyi 65536
 # define one 65535
@@ -18,50 +19,80 @@ void en_key(uint128_t key, uint16_t Z[7][10] );                 // Функци�
 void de_key(uint16_t Z[7][10],uint16_t DK[7][10]);              // Функция генерации ключей дешифрования
 unsigned inv(unsigned xin);                                     // Функция мультпликативной инверсии
 unsigned mul(unsigned a, unsigned b);                           // Функция умножения 
+void IDEA(unsigned XX[5], unsigned YY[5], char* mode);
+FILE* in;
+FILE* out;
+
+int main(int argc, char * argv[])
+{
+    int flag;
+    unsigned XX[5] = {0};
+    unsigned YY[5] = {0};
+    if (argc < 2 ) 
+    {
+        printf("Usage: ./IDEA -e/-d filename\n");
+        return -1;
+    }
+    in = fopen(argv[2], "rb");
+    out = fopen(strcat(argv[2], ".encrypted"), "wb");
+    while(1)
+    {
+        for (int i = 1; i <= 4; i++)
+        {
+            XX[i] = 0;
+            if (0 == fread(&XX[i], sizeof(uint16_t), 1, in)) {flag = 1; break;}
+            printf("DEBUG : %x\n", XX[i]);
+        }
+        if (flag == 1) break;
+        IDEA(XX, YY, argv[1]);
+        for (int i = 1; i <= 4; i++)
+        {
+            fwrite(&YY[i], sizeof(uint16_t), 1, out);
+        }
+    }
+    fclose(in);
+    fclose(out);
+}
 
 
-int main(){
+void IDEA(unsigned XX[5], unsigned YY[5], char* mode){
     int i, j, k, x;
     uint16_t Z[7][10]; //матрица 16-битных подключей шифрования
     uint16_t DK[7][10]; //матрица 16-битных подключей шиформавания
-    unsigned XX[5]; //4 16-битных блока входных данных
-    unsigned YY[5]; //4 16-битных блока зашифрованных данных
-    unsigned TT[5]; //4 16-битных блока расшифорванных данных
+    // unsigned TT[5]; //4 16-битных блока расшифорванных данных
     uint128_t key; // 128-битный ключ
     ((uint64_t*)&key)[0] = (uint64_t)0x0001000200030004; // 128-битный ключ 
     ((uint64_t*)&key)[1] = (uint64_t)0x0005000600070008; // 128-битный ключ
     en_key(key, Z); 
-    printf("\n encryption keys Z1 Z2 Z3 Z4 Z5 Z6");
-    for(j = 1; j <= 9; j++){ 
-        printf("\n %3d-th round ", j);
-        if (j == 9) 
-            for(i = 1; i <= 4; i++) 
-                printf(" %6u",Z[i][j]);
-        else 
-            for(i = 1; i <= 6; i++)
-                printf(" %6u",Z[i][j]);
-    }
+        printf("\n encryption keys Z1 Z2 Z3 Z4 Z5 Z6");
+          for(j = 1; j <= 9; j++){ 
+          printf("\n %3d-th round ", j);
+          if (j == 9) 
+          for(i = 1; i <= 4; i++) 
+          printf(" %x",Z[i][j]);
+          else 
+          for(i = 1; i <= 6; i++)
+          printf(" %x",Z[i][j]);
+          }
 
     de_key(Z,DK); 
-    printf("\n \n decryption keys DK1 DK2 DK3 DK4 DK5 DK6 ");
-    for(j = 1; j <= 9; j++){
-        printf("\n %3d-th round ", j);
-        if (j == 9)
-            for(i = 1; i <= 4; i++)
-                printf(" %6u",DK[i][j]);
-        else
-            for(i = 1; i <= 6; i++)
-                printf(" %6u",DK[i][j]);
-    }
+        printf("\n \n decryption keys DK1 DK2 DK3 DK4 DK5 DK6 ");
+          for(j = 1; j <= 9; j++){
+          printf("\n %3d-th round ", j);
+          if (j == 9)
+          for(i = 1; i <= 4; i++)
+          printf(" %x",DK[i][j]);
+          else
+          for(i = 1; i <= 6; i++)
+          printf(" %x",DK[i][j]);
+          }
 
-    for (x = 1; x <= 4; x++) 
-        XX[x] = x-1;
-    printf("\n \n plaintext X %6u %6u %6u %6u \n", XX[1], XX[2], XX[3], XX[4]);
-    cipher(XX,YY,Z);
-    printf("\n \n cipherhertext Y %6u %6u %6u %6u \n", YY[1], YY[2], YY[3], YY[4]);
-    cipher(YY,TT,DK);
-    printf("\n \n result T %6u %6u %6u %6u \n", TT[1], TT[2], TT[3], TT[4]);
-    return 0;
+        printf("\n \n plaintext X %x %x %x %x \n", XX[1], XX[2], XX[3], XX[4]);
+    if (strcmp(mode, "-e") == 0) cipher(XX,YY,Z);
+    if (strcmp(mode, "-d") == 0) cipher(XX,YY,DK);
+    //    printf("\n \n cipherhertext Y %x %x %x %x \n", YY[1], YY[2], YY[3], YY[4]);
+    //    cipher(YY,TT,DK);
+    //    printf("\n \n result T %x %x %x %x \n", TT[1], TT[2], TT[3], TT[4]);
 }
 
 /* Алгоритм шифрования */
@@ -71,23 +102,20 @@ void cipher(unsigned XX[5],unsigned YY[5],uint16_t Z[7][10]){
     x2 = XX[2]; 
     x3 = XX[3]; 
     x4 = XX[4];
-    for (r = 1; r <= 8; r++){ /* Раунды 1-8 */
-
+    for (r = 1; r < 9; r++){ /* Раунды 1-8 */
         x1 = mul(x1, Z[1][r]); 
         x4 = mul(x4, Z[4][r]);
         x2 = (x2 + Z[2][r]) & one; 
         x3 = (x3 + Z[3][r]) & one;
-
         kk = mul(Z[5][r], (x1^x3));
         t1 = mul(Z[6][r], (kk + (x2^x4)) & one);
         t2 = (kk + t1) & one;
-
         x1 = x1^t1; 
         x4 = x4^t2;
         a = x2^t2; 
         x2 = x3^t1; 
         x3 = a;
-        printf("\n %1u-th rnd %6u %6u %6u %6u ", r, x1, x2, x3, x4);
+        printf("%3d-th rnd %x %x %x %x \n", r, x1, x2, x3, x4);
     }
 
     /* Выходное преобразование */

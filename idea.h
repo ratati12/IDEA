@@ -11,29 +11,32 @@ typedef unsigned __int128 uint128_t;
 
 #define ROL32(a,n) (((a) << (n)) | ((a) >> (32 - (n))))
 
-void Cipher_IDEA_Mode_CTR(bool modeselect, uint128_t key, uint64_t initialvector, uint64_t numtexts, uint64_t *intexts, uint64_t *outtexts);
+void Cipher_IDEA_Mode_CFB(bool modeselect, uint128_t key, uint64_t initialvector, uint64_t numtexts, uint64_t *intexts, uint64_t *outtexts);
 
 uint64_t Cipher_IDEA_encryptdecrypt(uint64_t plaintext, uint16_t *K, uint16_t offset);
 void Key_Generator(uint128_t IDEAkey, uint16_t *encrypt, uint16_t *decrypt);
 static uint16_t ideaMul(uint16_t a, uint16_t b);
 static uint16_t ideaInv(uint16_t a);
 
-
-void Cipher_IDEA_Mode_CTR(bool modeselect, uint128_t key, uint64_t initialvector, uint64_t numtexts, uint64_t *intexts, uint64_t *outtexts) {
-	uint64_t i;
-	uint16_t *key_encrypt, *key_decrypt;
-	
-	// allocate memory for round keys and generate round keys
-	key_encrypt = (uint16_t*) malloc(sizeof(uint16_t) * 54);
-	key_decrypt = (uint16_t*) malloc(sizeof(uint16_t) * 54);
-	Key_Generator(key, key_encrypt, key_decrypt);
-
-	// perform CFB encryption/decryption
-	for(i = 0; i < numtexts; i++) {
-		outtexts[i] = intexts[i] ^ Cipher_IDEA_encryptdecrypt(initialvector ^ i, key_encrypt, 0);
-	}
+void Cipher_IDEA_Mode_CFB(bool modeselect, uint128_t key, uint64_t initialvector, uint64_t numtexts, uint64_t *intexts, uint64_t *outtexts) {
+    uint64_t i;
+    uint16_t *key_encrypt, *key_decrypt;
+    key_encrypt = (uint16_t*) malloc(sizeof(uint16_t) * 54);
+    key_decrypt = (uint16_t*) malloc(sizeof(uint16_t) * 54);
+    Key_Generator(key, key_encrypt, key_decrypt);
+    if(modeselect) { 
+        outtexts[0] = intexts[0] ^ Cipher_IDEA_encryptdecrypt(initialvector, key_encrypt, 0);
+    } else { 
+        outtexts[0] = intexts[0] ^ Cipher_IDEA_encryptdecrypt(initialvector, key_encrypt, 0);
+    }
+    for(i = 1; i < numtexts; i++) {
+        if(modeselect) { 
+            outtexts[i] = intexts[i] ^ Cipher_IDEA_encryptdecrypt(outtexts[i-1], key_encrypt, 0);
+        } else { 
+            outtexts[i] = intexts[i] ^ Cipher_IDEA_encryptdecrypt(intexts[i-1], key_encrypt, 0);
+        }
+    }
 }
-
 uint64_t Cipher_IDEA_encryptdecrypt(uint64_t plaintext, uint16_t *K, uint16_t offset) {
 
     uint16_t a=(plaintext & 0xFFFF000000000000) >> 48, b=(plaintext & 0x0000FFFF00000000) >> 32,
@@ -52,20 +55,15 @@ uint64_t Cipher_IDEA_encryptdecrypt(uint64_t plaintext, uint16_t *K, uint16_t of
         b += k[1]; 
         c += k[2]; 
         d = ideaMul(d, k[3]); 
-
         //printf("          a: %.4x, b: %.4x, c: %.4x, d: %.4x\n", a,b,c,d); 
         e = a ^ b; 
         f = c ^ d; 
         //printf("          e: %.4x, f: %.4x\n", e, f); 
-        //e = ideaMul(e, k[4]); // to call this the new value of e or to say f += ideaMul(k[4], e);?
         e = ideaMul(e, 46457);
         f += e;
-        //f = ideaMul(f,k[5]);
         f = ideaMul(f,46457);
         e += f;
-
         //printf("          e: %.4x, f: %.4x\n", e, f);
-
         a ^= f;
         d ^= e;
 
@@ -78,10 +76,7 @@ uint64_t Cipher_IDEA_encryptdecrypt(uint64_t plaintext, uint16_t *K, uint16_t of
         }
         //printf("          a: %.4x, b: %.4x, c: %.4x, d: %.4x\n", a,b,c,d); 
         k += 6;
-
-
     }
-
     a = ideaMul(a, k[0]);
     c += k[1]; 
     b += k[2]; 

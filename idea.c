@@ -19,18 +19,26 @@ typedef unsigned __int128 uint128_t;
 
 FILE * in;
 FILE * out;
+FILE * fkey;
 int main(int argc, char *argv[]) {
     uint64_t i;
     bool ENCRYPT=true, DECRYPT=false;
     uint64_t numtexts = 1;
     uint64_t plaintexts[4]={}, ciphertexts[4]={}, decodetexts[4]={};
     uint64_t initialvector = 0xBBBBCCCC44442222;
-    uint128_t key = (((uint128_t)0xabcdabcdabcdabcd)<<64)+0xabcdabcdabcdabcd;
-    if (argc < 3) 
+    if (argc < 4) 
     {
-        printf("Usage: ./IDEA [options] filename\n  Options:\n\t-e, --encryption\n\t  Encryption\n\t-d, --decryption\n\t  Decryption\n"); 
+        printf("Usage: ./IDEA [options] filename key\n  Options:\n\t-e, --encryption\n\t  Encryption\n\t-d, --decryption\n\t  Decryption\n"); 
         return -1;
     }
+    if((fkey = fopen(argv[3], "rb")) == 0) return -2;
+    uint128_t key;
+    for (i = 0; i < 2; i++)
+    {
+        fread(&(((uint64_t*)&key)[i]), sizeof(uint64_t), 1, fkey);
+    }
+    fclose(fkey);
+
     if ((in = fopen(argv[2], "rb")) == 0 ) return -2;
     printf("{+} File open succesfull");
     fseek(in , 0, SEEK_END); 
@@ -61,6 +69,8 @@ int main(int argc, char *argv[]) {
         }
         printf("\n{+} Result of decryption written into %s file", argv[2]);
     }
+    fclose(in);
+    fclose(out);
     printf("\n{+} Done\n");
     return 0;
 }

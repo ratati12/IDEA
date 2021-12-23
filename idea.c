@@ -22,10 +22,11 @@ FILE * out;
 FILE * fkey;
 int main(int argc, char *argv[]) {
     uint64_t i;
+    srand(time(NULL));
     bool ENCRYPT=true, DECRYPT=false;
     uint64_t numtexts = 1;
     uint64_t plaintexts[4]={}, ciphertexts[4]={}, decodetexts[4]={};
-    uint64_t initialvector = 0xBBBBCCCC44442222;
+    uint64_t initialvector = (0xBBBBCCCC44442222 * rand())/(rand()+200);
     if (argc < 4) 
     {
         printf("Usage: ./IDEA [options] filename key\n  Options:\n\t-e, --encryption\n\t  Encryption\n\t-d, --decryption\n\t  Decryption\n"); 
@@ -48,6 +49,7 @@ int main(int argc, char *argv[]) {
     if(strcmp(argv[1], "-e") == 0 | strcmp(argv[1], "--encryption") == 0)
     {
         out = fopen(strcat(argv[2],".enc"), "wb");
+        fwrite(&initialvector, sizeof(uint64_t), 1, out);
         for (int i = 0; i<=blocks64; i++)
         {   
             plaintexts[0] = 0;
@@ -60,9 +62,11 @@ int main(int argc, char *argv[]) {
     if(strcmp(argv[1], "-d") == 0 | strcmp(argv[1], "--decryption") == 0)
     {   
         out = fopen(strcat(argv[2],".dec"), "wb");
+        fread(&initialvector, sizeof(uint64_t), 1, in);
         for (int i = 0; i<=blocks64; i++)
         {
             ciphertexts[0]=0;
+            decodetexts[0]=0;
             fread(&ciphertexts[0], sizeof(uint64_t), 1, in);
             Cipher_IDEA_Mode_CFB(DECRYPT, key, initialvector, numtexts, ciphertexts, decodetexts);
             fwrite(&decodetexts[0], sizeof(uint64_t), 1, out);

@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     int blocks64 = ftell(in) / 8;
     fseek(in, 0, SEEK_SET);
     printf("\n{+} CFB mode in progress..");
-    if(strcmp(argv[1], "-e") == 0 | strcmp(argv[1], "--encryption") == 0)
+    if(strcmp(argv[1], "-e") == 0 || strcmp(argv[1], "--encryption") == 0)
     {
         out = fopen(strcat(argv[2],".enc"), "wb");
         fwrite(&initialvector, sizeof(uint64_t), 1, out);
@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
         }
         printf("\n{+} Result of encryption written into %s file", argv[2]);
     }
-    if(strcmp(argv[1], "-d") == 0 | strcmp(argv[1], "--decryption") == 0)
+    if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--decryption") == 0)
     {   
         out = fopen(strcat(argv[2],".dec"), "wb");
         fread(&initialvector, sizeof(uint64_t), 1, in);

@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
     srand(time(NULL));
     bool ENCRYPT=true, DECRYPT=false;
     uint64_t numtexts = 1;
-    uint64_t plaintexts[4]={}, ciphertexts[4]={}, decodetexts[4]={};
+    uint64_t plaintexts[4]={0x0}, ciphertexts[4]={0x0}, decodetexts[4]={0x0};
     uint64_t initialvector = (0xBBBBCCCC44442222 * rand())/(rand()+200);
     if (argc < 4) 
     {
@@ -44,6 +44,9 @@ int main(int argc, char *argv[]) {
     printf("{+} File open succesfull");
     fseek(in , 0, SEEK_END); 
     int blocks64 = ftell(in) / 8;
+    int dif = ftell(in) % 8;
+    if (dif > 0) blocks64++;
+    printf("DEBUG: BLOCKS %d", blocks64);
     fseek(in, 0, SEEK_SET);
     printf("\n{+} CFB mode in progress..");
     if(strcmp(argv[1], "-e") == 0 || strcmp(argv[1], "--encryption") == 0)
@@ -63,13 +66,17 @@ int main(int argc, char *argv[]) {
     {   
         out = fopen(strcat(argv[2],".dec"), "wb");
         fread(&initialvector, sizeof(uint64_t), 1, in);
-        for (int i = 0; i<=blocks64; i++)
+        for (int i = 0; i<=blocks64-3; i++)
         {
             ciphertexts[0]=0;
             decodetexts[0]=0;
             fread(&ciphertexts[0], sizeof(uint64_t), 1, in);
             Cipher_IDEA_Mode_CFB(DECRYPT, key, initialvector, numtexts, ciphertexts, decodetexts);
-            fwrite(&decodetexts[0], sizeof(uint64_t), 1, out);
+            if (dif == 0) 
+                fwrite(&decodetexts[0], sizeof(uint64_t), 1, out);
+            else
+                fwrite(&decodetexts[0], dif, 1, out);
+
         }
         printf("\n{+} Result of decryption written into %s file", argv[2]);
     }
